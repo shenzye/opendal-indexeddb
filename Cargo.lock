@@ -735,7 +735,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "opendal_indexeddb"
+name = "opendal-indexeddb"
 version = "0.0.1"
 dependencies = [
  "async-once-cell",
