@@ -1,2 +1,3 @@
-A OpenDal Indexeddb service library
-Very early implementation
+A unofficial OpenDal Indexeddb service library 
+
+The project has not yet undergone any testing
