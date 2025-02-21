@@ -99,7 +99,7 @@ pub struct IndexeddbScanner {
 impl Stream for IndexeddbScanner {
     type Item = opendal::Result<String>;
 
-    fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
+    fn poll_next(mut self: Pin<&mut Self>, _cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
         Poll::Ready(self.keys.next().map(|k| Ok(k)))
     }
 }
@@ -130,7 +130,10 @@ impl kv::Adapter for Adapter {
 
     async fn get(&self, path: &str) -> opendal::Result<Option<Buffer>> {
         if path.is_empty() {
-            return Err(opendal::Error::from(ErrorKind::NotFound));
+            return Err(opendal::Error::new(
+                ErrorKind::NotFound,
+                "path should not be empty",
+            ));
         }
 
         let db = self.get_client().await?;
@@ -155,7 +158,10 @@ impl kv::Adapter for Adapter {
 
     async fn set(&self, path: &str, value: Buffer) -> opendal::Result<()> {
         if path.is_empty() {
-            return Err(opendal::Error::from(ErrorKind::NotFound));
+            return Err(opendal::Error::new(
+                ErrorKind::NotFound,
+                "path should not be empty",
+            ));
         }
 
         let db = self.get_client().await?;
@@ -181,7 +187,10 @@ impl kv::Adapter for Adapter {
 
     async fn delete(&self, path: &str) -> opendal::Result<()> {
         if path.is_empty() {
-            return Err(opendal::Error::from(ErrorKind::NotFound));
+            return Err(opendal::Error::new(
+                ErrorKind::NotFound,
+                "path should not be empty",
+            ));
         }
 
         let db = self.get_client().await?;

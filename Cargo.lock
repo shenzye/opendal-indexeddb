@@ -736,7 +736,7 @@ dependencies = [
 
 [[package]]
 name = "opendal-indexeddb"
-version = "0.1.2"
+version = "0.1.3"
 dependencies = [
  "async-once-cell",
  "futures",
@@ -747,6 +747,7 @@ dependencies = [
  "serde",
  "serde-wasm-bindgen",
  "serde_bytes",
+ "uuid",
 ]
 
 [[package]]
@@ -1147,7 +1148,9 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "93d59ca99a559661b96bf898d8fce28ed87935fd2bea9f05983c1464dd6c71b1"
 dependencies = [
  "getrandom 0.3.1",
+ "js-sys",
  "serde",
+ "wasm-bindgen",
 ]
 
 [[package]]
