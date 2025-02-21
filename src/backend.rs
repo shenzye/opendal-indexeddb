@@ -129,8 +129,11 @@ impl kv::Adapter for Adapter {
     }
 
     async fn get(&self, path: &str) -> opendal::Result<Option<Buffer>> {
-        let db = self.get_client().await?;
+        if path.is_empty() {
+            return Err(opendal::Error::from(ErrorKind::NotFound));
+        }
 
+        let db = self.get_client().await?;
         let kv = db
             .transaction(&[&self.object_store_name])
             .run({
@@ -151,8 +154,11 @@ impl kv::Adapter for Adapter {
     }
 
     async fn set(&self, path: &str, value: Buffer) -> opendal::Result<()> {
-        let db = self.get_client().await?;
+        if path.is_empty() {
+            return Err(opendal::Error::from(ErrorKind::NotFound));
+        }
 
+        let db = self.get_client().await?;
         db.transaction(&[&self.object_store_name])
             .rw()
             .run({
@@ -174,6 +180,10 @@ impl kv::Adapter for Adapter {
     }
 
     async fn delete(&self, path: &str) -> opendal::Result<()> {
+        if path.is_empty() {
+            return Err(opendal::Error::from(ErrorKind::NotFound));
+        }
+
         let db = self.get_client().await?;
         db.transaction(&[&self.object_store_name])
             .rw()
