@@ -68,8 +68,8 @@ impl Adapter {
                     .open(self.db_name.as_str(), 1, {
                         let object_store_name = self.object_store_name.to_string();
                         move |evt| async move {
-                            if evt.new_version() == 1 {
-                                let db = evt.database();
+                            let db = evt.database();
+                            if !db.object_store_names().contains(&object_store_name) {
                                 db.build_object_store(object_store_name.as_str())
                                     .key_path("k")
                                     .create()?;
@@ -79,14 +79,7 @@ impl Adapter {
                     })
                     .await
                     .map_err(|err| opendal::Error::new(ErrorKind::Unexpected, err.to_string()))?;
-                if !db.object_store_names().contains(&self.object_store_name) {
-                    db.build_object_store(self.object_store_name.as_str())
-                        .key_path("k")
-                        .create()
-                        .map_err(|err| {
-                            opendal::Error::new(ErrorKind::Unexpected, err.to_string())
-                        })?;
-                }
+
                 Ok(SendWrapper::new(db))
             })
             .await
