@@ -79,6 +79,14 @@ impl Adapter {
                     })
                     .await
                     .map_err(|err| opendal::Error::new(ErrorKind::Unexpected, err.to_string()))?;
+                if !db.object_store_names().contains(&self.object_store_name) {
+                    db.build_object_store(self.object_store_name.as_str())
+                        .key_path("k")
+                        .create()
+                        .map_err(|err| {
+                            opendal::Error::new(ErrorKind::Unexpected, err.to_string())
+                        })?;
+                }
                 Ok(SendWrapper::new(db))
             })
             .await
@@ -129,13 +137,6 @@ impl kv::Adapter for Adapter {
     }
 
     async fn get(&self, path: &str) -> opendal::Result<Option<Buffer>> {
-        if path.is_empty() {
-            return Err(opendal::Error::new(
-                ErrorKind::NotFound,
-                "path should not be empty",
-            ));
-        }
-
         let db = self.get_client().await?;
         let kv = db
             .transaction(&[&self.object_store_name])
@@ -157,13 +158,6 @@ impl kv::Adapter for Adapter {
     }
 
     async fn set(&self, path: &str, value: Buffer) -> opendal::Result<()> {
-        if path.is_empty() {
-            return Err(opendal::Error::new(
-                ErrorKind::NotFound,
-                "path should not be empty",
-            ));
-        }
-
         let db = self.get_client().await?;
         db.transaction(&[&self.object_store_name])
             .rw()
@@ -186,13 +180,6 @@ impl kv::Adapter for Adapter {
     }
 
     async fn delete(&self, path: &str) -> opendal::Result<()> {
-        if path.is_empty() {
-            return Err(opendal::Error::new(
-                ErrorKind::NotFound,
-                "path should not be empty",
-            ));
-        }
-
         let db = self.get_client().await?;
         db.transaction(&[&self.object_store_name])
             .rw()
