@@ -1,5 +1,4 @@
 use crate::config::IndexeddbConfig;
-use async_once_cell::OnceCell;
 use futures::{Stream, StreamExt};
 use indexed_db::{Database, Factory};
 use js_sys::wasm_bindgen::JsValue;
@@ -9,7 +8,6 @@ use opendal::raw::adapters::kv::Info;
 use opendal::raw::Access;
 use opendal::Configurator;
 use opendal::{Buffer, Builder, Capability, ErrorKind, Scheme};
-use send_wrapper::SendWrapper;
 use serde::{Deserialize, Serialize};
 use std::pin::Pin;
 use std::task::{Context, Poll};
@@ -34,7 +32,6 @@ impl Builder for IndexeddbBuilder {
 
     fn build(self) -> opendal::Result<impl Access> {
         Ok(IndexeddbBackend::new(Adapter {
-            db: OnceCell::new(),
             db_name: self.config.db_name.unwrap_or_else(|| "opendal".to_string()),
             object_store_name: self
                 .config
@@ -53,50 +50,44 @@ impl Builder for IndexeddbBuilder {
 
 #[derive(Debug)]
 pub struct Adapter {
-    db: OnceCell<SendWrapper<Database<opendal::Error>>>,
     db_name: String,
     object_store_name: String,
 }
 
 impl Adapter {
-    async fn get_client(&self) -> opendal::Result<&SendWrapper<Database<opendal::Error>>> {
-        self.db
-            .get_or_try_init(async {
-                let factory = Factory::<opendal::Error>::get()
-                    .map_err(|err| opendal::Error::new(ErrorKind::Unexpected, err.to_string()))?;
-                let new_version = {
-                    if let Ok(db) = factory.open_latest_version(&self.db_name).await {
-                        if db.object_store_names().contains(&self.object_store_name) {
-                            return Ok(SendWrapper::new(db));
-                        } else {
-                            let nv = db.version() + 1;
-                            db.close();
-                            nv
-                        }
-                    } else {
-                        1
+    async fn get_client(&self) -> opendal::Result<Database<opendal::Error>> {
+        let factory = Factory::<opendal::Error>::get()
+            .map_err(|err| opendal::Error::new(ErrorKind::Unexpected, err.to_string()))?;
+        let new_version = {
+            if let Ok(db) = factory.open_latest_version(&self.db_name).await {
+                if db.object_store_names().contains(&self.object_store_name) {
+                    return Ok(db);
+                } else {
+                    let nv = db.version() + 1;
+                    db.close();
+                    nv
+                }
+            } else {
+                1
+            }
+        };
+
+        let db = factory
+            .open(&self.db_name, new_version, {
+                let object_store_name = self.object_store_name.to_string();
+                move |evt| async move {
+                    if evt.new_version() == new_version {
+                        let db = evt.database();
+                        db.build_object_store(&object_store_name)
+                            .key_path("k")
+                            .create()?;
                     }
-                };
-
-                let db = factory
-                    .open(&self.db_name, new_version, {
-                        let object_store_name = self.object_store_name.to_string();
-                        move |evt| async move {
-                            if evt.new_version() == new_version {
-                                let db = evt.database();
-                                db.build_object_store(&object_store_name)
-                                    .key_path("k")
-                                    .create()?;
-                            }
-                            Ok(())
-                        }
-                    })
-                    .await
-                    .map_err(|err| opendal::Error::new(ErrorKind::Unexpected, err.to_string()))?;
-
-                return Ok(SendWrapper::new(db));
+                    Ok(())
+                }
             })
             .await
+            .map_err(|err| opendal::Error::new(ErrorKind::Unexpected, err.to_string()))?;
+        Ok(db)
     }
 }
 

@@ -14,8 +14,6 @@ indexed-db = { version = "0.4", default-features = false }
 serde-wasm-bindgen = { version = "0.6", default-features = false }
 serde_bytes = "0.11"
 futures = { version = "0.3", default-features = false }
-async-once-cell = { version = "0.5", default-features = false }
-send_wrapper = { version = "0.6", default-features = false }
 
 [target.'cfg(target_family = "wasm")'.dependencies]
 uuid = { version = "1.15", default-features = false, features = ["js"] }
