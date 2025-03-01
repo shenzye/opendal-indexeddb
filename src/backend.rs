@@ -64,13 +64,27 @@ impl Adapter {
             .get_or_try_init(async {
                 let factory = Factory::<opendal::Error>::get()
                     .map_err(|err| opendal::Error::new(ErrorKind::Unexpected, err.to_string()))?;
+                let new_version = {
+                    if let Ok(db) = factory.open_latest_version(&self.db_name).await {
+                        if db.object_store_names().contains(&self.object_store_name) {
+                            return Ok(SendWrapper::new(db));
+                        } else {
+                            let nv = db.version() + 1;
+                            db.close();
+                            nv
+                        }
+                    } else {
+                        1
+                    }
+                };
+
                 let db = factory
-                    .open(self.db_name.as_str(), 1, {
+                    .open(&self.db_name, new_version, {
                         let object_store_name = self.object_store_name.to_string();
                         move |evt| async move {
-                            let db = evt.database();
-                            if !db.object_store_names().contains(&object_store_name) {
-                                db.build_object_store(object_store_name.as_str())
+                            if evt.new_version() == new_version {
+                                let db = evt.database();
+                                db.build_object_store(&object_store_name)
                                     .key_path("k")
                                     .create()?;
                             }
@@ -80,7 +94,7 @@ impl Adapter {
                     .await
                     .map_err(|err| opendal::Error::new(ErrorKind::Unexpected, err.to_string()))?;
 
-                Ok(SendWrapper::new(db))
+                return Ok(SendWrapper::new(db));
             })
             .await
     }
