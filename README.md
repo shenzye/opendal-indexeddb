@@ -1,3 +1,9 @@
 A unofficial opendal indexeddb service library 
 
-The project has not yet undergone any testing
+This project is not yet production-ready.
+
+
+test command ( wasm-bindgen-cli 0.2.95 ):
+```
+wasm-pack test --headless --firefox
+```
