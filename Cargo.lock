@@ -740,6 +740,7 @@ name = "opendal-indexeddb"
 version = "0.1.4"
 dependencies = [
  "futures",
+ "gloo-timers",
  "indexed-db",
  "js-sys",
  "opendal",
@@ -748,6 +749,7 @@ dependencies = [
  "serde_bytes",
  "uuid",
  "wasm-bindgen",
+ "wasm-bindgen-futures",
  "wasm-bindgen-test",
 ]
 

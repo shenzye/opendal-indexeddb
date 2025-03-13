@@ -1,7 +1,11 @@
 use crate::config::IndexeddbConfig;
-use futures::future::{join, join_all};
+use gloo_timers::future::sleep;
 use opendal::raw::Access;
 use opendal::{Configurator, Operator};
+use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::Arc;
+use std::time::Duration;
+use wasm_bindgen_futures::spawn_local;
 use wasm_bindgen_test::{wasm_bindgen_test, wasm_bindgen_test_configure};
 
 wasm_bindgen_test_configure!(run_in_browser);
@@ -14,23 +18,30 @@ async fn concurrent_rw_test() {
         root: None,
     };
     let builder = session_store_config.into_builder();
+
     let op = Operator::new(builder).unwrap().finish();
-
-    let mut write_tasks = Vec::new();
-
     op.write("hello", "world").await.unwrap();
-    for _ in 0..100 {
-        write_tasks.push(async {
-            op.write("hello", "world").await.unwrap();
-        });
-    }
 
-    let mut read_tasks = Vec::new();
+    let done = Arc::new(AtomicUsize::new(0));
     for _ in 0..1000 {
-        read_tasks.push(async {
-            assert_eq!(op.read("hello").await.unwrap().to_vec(), b"world");
+        spawn_local({
+            let op = op.clone();
+            let done = done.clone();
+            async move {
+                op.write("hello", "world").await.unwrap();
+                done.fetch_add(1, Ordering::SeqCst);
+            }
+        });
+        spawn_local({
+            let op = op.clone();
+            let done = done.clone();
+            async move {
+                assert_eq!(op.read("hello").await.unwrap().to_vec(), b"world");
+                done.fetch_add(1, Ordering::SeqCst);
+            }
         });
     }
-
-    join(join_all(write_tasks), join_all(read_tasks)).await;
+    while done.load(Ordering::SeqCst) != 2000 {
+        sleep(Duration::from_secs(1)).await;
+    }
 }
