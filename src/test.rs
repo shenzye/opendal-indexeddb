@@ -1,6 +1,5 @@
 use crate::config::IndexeddbConfig;
 use gloo_timers::future::sleep;
-use opendal::raw::Access;
 use opendal::{Configurator, Operator};
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
