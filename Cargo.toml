@@ -1,6 +1,6 @@
 [package]
 name = "opendal-indexeddb"
-version = "0.1.5"
+version = "0.54.0"
 edition = "2021"
 description = "A unofficial opendal indexeddb library ."
 license = "Apache-2.0"
