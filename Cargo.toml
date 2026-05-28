@@ -1,25 +1,24 @@
 [package]
 name = "opendal-indexeddb"
-version = "0.54.0"
-edition = "2021"
+version = "0.56.0"
+edition = "2024"
 description = "A unofficial opendal indexeddb library ."
 license = "Apache-2.0"
 repository = "https://github.com/shenzye/opendal-indexeddb"
 
 [dependencies]
-opendal = { version = "0.54", default-features = false }
+opendal = { version = "0.56", default-features = false }
 serde = { version = "1.0", default-features = false }
 js-sys = { version = "0.3", default-features = false }
 indexed-db = { version = "0.4", default-features = false }
 serde-wasm-bindgen = { version = "0.6", default-features = false }
 serde_bytes = "0.11"
-futures = { version = "0.3", default-features = false }
 
 [target.'cfg(target_family = "wasm")'.dependencies]
-uuid = { version = "1.18", default-features = false, features = ["js"] }
+uuid = { version = "1.23", default-features = false, features = ["js"] }
 
 [dev-dependencies]
-wasm-bindgen = "=0.2.100"
+wasm-bindgen = "=0.2.122"
 wasm-bindgen-test = "0.3"
 wasm-bindgen-futures = "0.4"
-gloo-timers = "0.3"
+gloo-timers = { version = "0.4", features = ["futures"] }
