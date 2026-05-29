@@ -5,8 +5,8 @@ use js_sys::wasm_bindgen::JsValue;
 use opendal::Configurator;
 use opendal::raw::oio;
 use opendal::raw::{
-    Access, AccessorInfo, OpDelete, OpList, OpRead, OpStat, OpWrite, RpDelete, RpList, RpRead,
-    RpStat, RpWrite, build_abs_path, build_rel_path, normalize_root,
+    Access, AccessorInfo, OpCreateDir, OpDelete, OpList, OpRead, OpStat, OpWrite, RpCreateDir,
+    RpDelete, RpList, RpRead, RpStat, RpWrite, build_abs_path, build_rel_path, normalize_root,
 };
 use opendal::{Buffer, Builder, Capability, EntryMode, ErrorKind, Metadata};
 use serde::{Deserialize, Serialize};
@@ -210,6 +210,7 @@ impl IndexeddbBackend {
             read: true,
             write: true,
             write_can_empty: true,
+            create_dir: true,
             delete: true,
             stat: true,
             list: true,
@@ -242,6 +243,16 @@ impl Access for IndexeddbBackend {
         self.info.clone()
     }
 
+    async fn create_dir(&self, path: &str, _: OpCreateDir) -> opendal::Result<RpCreateDir> {
+        let p = build_abs_path(&self.root, path);
+
+        if p != build_abs_path(&self.root, "") {
+            self.core.set(&p, Buffer::new()).await?;
+        }
+
+        Ok(RpCreateDir::default())
+    }
+
     async fn stat(&self, path: &str, _: OpStat) -> opendal::Result<RpStat> {
         let p = build_abs_path(&self.root, path);
 
@@ -249,9 +260,14 @@ impl Access for IndexeddbBackend {
             Ok(RpStat::new(Metadata::new(EntryMode::DIR)))
         } else {
             match self.core.get(&p).await? {
-                Some(bs) => Ok(RpStat::new(
-                    Metadata::new(EntryMode::FILE).with_content_length(bs.len() as u64),
-                )),
+                Some(bs) => {
+                    let mode = EntryMode::from_path(path);
+                    let mut meta = Metadata::new(mode);
+                    if mode.is_file() {
+                        meta.set_content_length(bs.len() as u64);
+                    }
+                    Ok(RpStat::new(meta))
+                }
                 None => Err(opendal::Error::new(
                     ErrorKind::NotFound,
                     "indexeddb doesn't have this path",
@@ -289,7 +305,13 @@ impl Access for IndexeddbBackend {
 
     async fn list(&self, path: &str, args: OpList) -> opendal::Result<(RpList, Self::Lister)> {
         let p = build_abs_path(&self.root, path);
-        let keys = self.core.scan(&p).await?;
+        let keys = self
+            .core
+            .scan(&p)
+            .await?
+            .into_iter()
+            .filter(|key| key != &p)
+            .collect();
         let lister = IndexeddbLister::new(&self.root, keys);
         let lister = oio::HierarchyLister::new(lister, path, args.recursive());
 
@@ -315,11 +337,11 @@ impl oio::List for IndexeddbLister {
     async fn next(&mut self) -> opendal::Result<Option<oio::Entry>> {
         match self.keys.next() {
             Some(key) => {
-                let mode = EntryMode::from_path(&key);
                 let mut path = build_rel_path(&self.root, &key);
                 if path.is_empty() {
                     path = "/".to_string();
                 }
+                let mode = EntryMode::from_path(&path);
                 Ok(Some(oio::Entry::new(&path, Metadata::new(mode))))
             }
             None => Ok(None),
