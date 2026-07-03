@@ -2,9 +2,15 @@ name: Test
 
 on:
   push:
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   test:
+    name: Chromium & Firefox
     runs-on: ubuntu-latest
 
     steps:
@@ -19,10 +25,52 @@ jobs:
         run: cargo binstall wasm-pack
 
       - name: Install wasm-bindgen-cli
-        run: cargo binstall wasm-bindgen-cli --version 0.2.122 --locked
+        run: cargo binstall wasm-bindgen-cli --version 0.2.121 --locked
+
+      - name: Rustfmt
+        run: cargo fmt --check
+
+      - name: Docs
+        run: RUSTDOCFLAGS="-D warnings" cargo doc --no-deps --target wasm32-unknown-unknown
+
+      - name: Check native lib
+        run: cargo check --lib --target x86_64-unknown-linux-gnu
+
+      - name: Clippy native all targets
+        run: cargo clippy --target x86_64-unknown-linux-gnu --all-targets -- -D warnings
+
+      - name: Clippy wasm all targets
+        run: cargo clippy --target wasm32-unknown-unknown --all-targets -- -D warnings
 
       - name: Run tests firefox
         run: wasm-pack test --headless --firefox
 
       - name: Run tests chrome
         run: wasm-pack test --headless --chrome
+
+      - name: Cargo package list
+        run: cargo package --list
+
+  test-safari:
+    name: Safari
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - run: rustup toolchain install stable --profile minimal
+      - run: rustup target add wasm32-unknown-unknown
+      - uses: cargo-bins/cargo-binstall@v1.15.10
+
+      - name: Install wasm-pack
+        run: cargo binstall wasm-pack
+
+      - name: Install wasm-bindgen-cli
+        run: cargo binstall wasm-bindgen-cli --version 0.2.121 --locked
+
+      - name: Enable safaridriver
+        run: sudo safaridriver --enable
+
+      - name: Run tests safari
+        run: wasm-pack test --headless --safari

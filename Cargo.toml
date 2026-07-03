@@ -1,24 +1,39 @@
 [package]
 name = "opendal-indexeddb"
-version = "0.56.0"
+version = "0.57.0"
 edition = "2024"
-description = "A unofficial opendal indexeddb library ."
+description = "An unofficial OpenDAL IndexedDB service for wasm targets"
 license = "Apache-2.0"
 repository = "https://github.com/shenzye/opendal-indexeddb"
+readme = "README.md"
+keywords = ["opendal", "indexeddb", "wasm", "storage", "browser"]
+categories = ["wasm", "web-programming", "database-implementations"]
+rust-version = "1.86"
+
+[features]
+default = []
+perf-tests = []
 
 [dependencies]
-opendal = { version = "0.56", default-features = false }
+opendal = { version = "0.57", default-features = false }
 serde = { version = "1.0", default-features = false }
-js-sys = { version = "0.3", default-features = false }
-indexed-db = { version = "0.4", default-features = false }
-serde-wasm-bindgen = { version = "0.6", default-features = false }
 serde_bytes = "0.11"
 
 [target.'cfg(target_family = "wasm")'.dependencies]
-uuid = { version = "1.23", default-features = false, features = ["js"] }
+blake3 = { version = "1", default-features = false }
+futures-util = { version = "0.3", default-features = false, features = ["alloc"] }
+gloo-timers = { version = "0.4", default-features = false, features = ["futures"] }
+js-sys = { version = "0.3", default-features = false }
+indexed-db = { version = "0.4.2", default-features = false }
+serde-wasm-bindgen = { version = "0.6", default-features = false }
+wasm-bindgen-futures = "0.4"
 
 [dev-dependencies]
-wasm-bindgen = "=0.2.122"
+# Pinned: must exactly match the wasm-bindgen-cli version installed in CI.
+wasm-bindgen = "=0.2.121"
 wasm-bindgen-test = "0.3"
 wasm-bindgen-futures = "0.4"
 gloo-timers = { version = "0.4", features = ["futures"] }
+
+[package.metadata.docs.rs]
+targets = ["wasm32-unknown-unknown"]
